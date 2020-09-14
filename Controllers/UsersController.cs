@@ -7,6 +7,7 @@ using DatingApp.API.Dtos;
 using System.Collections.Generic;
 using System.Security.Claims;
 using DatingApp.API.Helpers;
+using DatingApp.API.Models;
 
 namespace DatingApp.API.Controllers
 {
@@ -71,6 +72,40 @@ namespace DatingApp.API.Controllers
             }
 
             throw new System.Exception($"Updating user {id} failed on save ");
+        }
+
+        [HttpPost("{id}/like/{recipientId}")]
+        public async Task<IActionResult> LikeUser(int id, int recipientId)
+        {
+            if(id != int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value)) return Unauthorized();
+
+            var like = await _repo.GetLike(id, recipientId);
+
+            if(like != null)
+            {
+                return BadRequest("You already like this users");
+            }
+
+            if(await _repo.GetUser(recipientId) == null)
+            {
+                return NotFound();
+            }
+
+            like = new Like
+            {
+                LikerId = id,
+                LikeeId = recipientId
+            }; 
+
+                // esto lo agrega en memoria, todavia no ne la DB
+            _repo.Add<Like>(like);
+
+            if(await _repo.SaveAll()) // aqui si se guarda en la DB
+            {
+                return Ok();
+            }
+
+            return BadRequest("fail to like user");
         }
     }
 }
